@@ -8,7 +8,8 @@ import {
     aggregateCallbacks,
     executeCallback,
     removeBlockedCallbacks,
-    removePrioritizedCallbacks
+    removePrioritizedCallbacks,
+    executeCallbackWebSocket
 } from '../actions/callbacks';
 
 import {stringifyId} from '../actions/dependencies';
@@ -97,9 +98,26 @@ const observer: IStoreObserverDefinition<IStoreState> = {
         );
 
         if (pickedSyncCallbacks.length) {
+            const [serversideCallbacks, clientsideCallbacks] = partition(
+                cb => cb.callback.clientside_function == undefined,
+                pickedSyncCallbacks
+            );
+            map(
+                cb =>
+                    executeCallbackWebSocket(
+                        cb,
+                        config,
+                        paths,
+                        layout,
+                        getStash(cb, paths),
+                        dispatch,
+                        getState
+                    ),
+                serversideCallbacks
+            )
             dispatch(
                 aggregateCallbacks([
-                    removePrioritizedCallbacks(pickedSyncCallbacks),
+                    removePrioritizedCallbacks(pickedSyncCallbacks), // NOTE: Should this be clientsideCallbacks?
                     addExecutingCallbacks(
                         map(
                             cb =>
@@ -113,7 +131,7 @@ const observer: IStoreObserverDefinition<IStoreState> = {
                                     dispatch,
                                     getState
                                 ),
-                            pickedSyncCallbacks
+                            clientsideCallbacks
                         )
                     )
                 ])

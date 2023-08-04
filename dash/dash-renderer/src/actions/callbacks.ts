@@ -11,7 +11,7 @@ import {
     values,
     toPairs,
     zip,
-    assocPath
+    assocPath,
 } from 'ramda';
 
 import {STATUS, JWT_EXPIRED_MESSAGE} from '../constants/constants';
@@ -31,7 +31,7 @@ import {
     IPrioritizedCallback,
     LongCallbackInfo,
     CallbackResponse,
-    CallbackResponseData
+    // CallbackResponseData
 } from '../types/callbacks';
 import {isMultiValued, stringifyId, isMultiOutputProp} from './dependencies';
 import {urlBase} from './utils';
@@ -42,6 +42,7 @@ import {notifyObservers, updateProps} from './index';
 import {CallbackJobPayload} from '../reducers/callbackJobs';
 import {handlePatch, isPatch} from './patch';
 import {getPath} from './paths';
+import socket from '../socket';
 
 export const addBlockedCallbacks = createAction<IBlockedCallback[]>(
     CallbackActionType.AddBlocked
@@ -334,7 +335,22 @@ function sideUpdate(outputs: any, dispatch: any, paths: any) {
         );
     });
 }
+function handleServersideWebSocket(
+    config: any,
+    payload: any,
+    socketJobId: any
+) {
+    // console.log("WebSocket: Provided with the following payload",payload)
 
+    const body = JSON.stringify(payload);
+    const headers = getCSRFHeader() as any; // REMOVE THIS?
+
+    socket.emit("dash-update-component",mergeDeepRight(mergeDeepRight(config.fetch, {
+        method: 'POST',
+        headers,
+        body
+    }),{socketJobId:socketJobId}));
+}
 function handleServerside(
     dispatch: any,
     hooks: any,
@@ -351,6 +367,7 @@ function handleServerside(
     }
 
     const requestTime = Date.now();
+    console.log("Provided with the following payload",payload)
     const body = JSON.stringify(payload);
     let cacheKey: string;
     let job: string;
@@ -380,20 +397,35 @@ function handleServerside(
             moreArgs.forEach(([key, value]) => addArg(key, value));
             moreArgs = moreArgs.filter(([_, __, single]) => !single);
         }
-
-        return fetch(
-            url,
-            mergeDeepRight(config.fetch, {
-                method: 'POST',
-                headers,
-                body
-            })
-        );
+        // fetch(
+        //     url,
+            // mergeDeepRight(config.fetch, {
+            //     method: 'POST',
+            //     headers,
+            //     body
+            // })
+        // );
+        return new Promise((resolve)=>{
+            // setTimeout(() => {
+                socket.emit("dash-update-component",mergeDeepRight(config.fetch, {
+                    method: 'POST',
+                    headers,
+                    body
+                }));
+                socket.on("dash-update-component-response",(res:any)=>{
+                    resolve((res));
+                })
+                console.trace("Callback Trace")
+                console.log("Delayed for 5 seconds.");
+            //   }, 5000);
+            
+        })
     };
 
     return new Promise((resolve, reject) => {
         const handleOutput = (res: any) => {
-            const {status} = res;
+            console.log("RESULT",res)
+            // const {status} = res;
 
             if (job) {
                 const callbackJob = getState().callbackJobs[job];
@@ -410,13 +442,15 @@ function handleServerside(
                         __dash_server: 0,
                         __dash_client: Date.now() - requestTime,
                         __dash_upload: body.length,
-                        __dash_download: Number(
-                            res.headers.get('Content-Length')
-                        )
+                        __dash_download: 10
+                        //                  Number(
+                        //     res.headers.get('Content-Length')
+                        // )
                     } as any;
 
-                    const timingHeaders =
-                        res.headers.get('Server-Timing') || '';
+                    // const timingHeaders =
+                    //     res.headers.get('Server-Timing') || '';
+                    const timingHeaders = '';
 
                     timingHeaders.split(',').forEach((header: any) => {
                         const name = header.split(';')[0];
@@ -440,8 +474,12 @@ function handleServerside(
                 }
             }
 
-            const finishLine = (data: CallbackResponseData) => {
+            const finishLine = (data: any) => {
+                console.log("data at finishline",data)
                 const {multi, response} = data;
+                console.log(multi)
+                console.log(response)
+
                 if (hooks.request_post) {
                     hooks.request_post(payload, response);
                 }
@@ -471,8 +509,9 @@ function handleServerside(
                 }
             };
 
-            if (status === STATUS.OK) {
-                res.json().then((data: CallbackResponseData) => {
+            if (res) {
+                // res.json.then((data: CallbackResponseData)
+                const data = JSON.parse(res);
                     if (!cacheKey && data.cacheKey) {
                         cacheKey = data.cacheKey;
                     }
@@ -512,15 +551,16 @@ function handleServerside(
                             long.interval !== undefined ? long.interval : 500
                         );
                     }
-                });
-            } else if (status === STATUS.PREVENT_UPDATE) {
-                completeJob();
-                recordProfile({});
-                resolve({});
-            } else {
-                completeJob();
-                reject(res);
-            }
+                // });
+            } 
+            // else if (status === STATUS.PREVENT_UPDATE) {
+            //     completeJob();
+            //     recordProfile({});
+            //     resolve({});
+            // } else {
+            //     completeJob();
+            //     reject(res);
+            // }
         };
 
         const handleError = () => {
@@ -541,7 +581,12 @@ function handleServerside(
         const handle = () => {
             fetchCallback().then(handleOutput, handleError);
         };
-        handle();
+        try{
+            handle();
+        } catch (error) {
+            console.log("Error here",error)
+            throw Error("ANOTHER ERROR")
+        }
     });
 }
 
@@ -574,6 +619,178 @@ function inputsToDict(inputs_list: any) {
     return inputs;
 }
 
+function getRandomInt(max:any) {
+    return Math.floor(max*Math.random());
+}
+  
+
+export function executeCallbackWebSocket(
+    cb: IPrioritizedCallback,
+    config: any,
+    paths: any,
+    layout: any,
+    {allOutputs}: any,
+    dispatch: any,
+    getState: any
+) {
+    const {output, inputs, state} = cb.callback;
+    try {
+        const inVals = fillVals(paths, layout, cb, inputs, 'Input', true);
+
+        /* Prevent callback if there's no inputs */
+        if (inVals === null) {
+            return {
+                ...cb,
+                executionPromise: null
+            };
+        }
+
+        const outputs: any[] = [];
+        const outputErrors: any[] = [];
+        allOutputs.forEach((out: any, i: number) => {
+            const [outi, erri] = unwrapIfNotMulti(
+                paths,
+                map(pick(['id', 'property']), out),
+                cb.callback.outputs[i],
+                cb.anyVals,
+                'Output'
+            );
+            outputs.push(outi);
+            if (erri) {
+                outputErrors.push(erri);
+            }
+        });
+
+        if (outputErrors.length) {
+            if (flatten(inVals).length) {
+                refErr(outputErrors, paths);
+            }
+            // This case is all-empty multivalued wildcard inputs,
+            // which we would normally fire the callback for, except
+            // some outputs are missing. So instead we treat it like
+            // regular missing inputs and just silently prevent it.
+            return {
+                ...cb,
+                executionPromise: null
+            };
+        }
+
+        const __execute = () => {
+            try {
+                const payload: ICallbackPayload = {
+                    output,
+                    outputs: isMultiOutputProp(output) ? outputs : outputs[0],
+                    inputs: inVals,
+                    changedPropIds: keys(cb.changedPropIds),
+                    state: cb.callback.state.length
+                        ? fillVals(paths, layout, cb, state, 'State')
+                        : undefined
+                };
+
+
+                let newConfig = config;
+                // let newHeaders: Record<string, string> | null = null;
+                // let lastError: any;
+
+                // const additionalArgs: [string, string, boolean?][] = [];
+                
+
+                // for (let retry = 0; retry <= MAX_AUTH_RETRIES; retry++) {
+                    try {
+                        // let data = await handleServerside(
+                        const socketJobId = getRandomInt(100000);
+
+                        handleServersideWebSocket(
+                            newConfig,
+                            payload,
+                            socketJobId
+                        );
+                        // https://stackoverflow.com/questions/43360629/dispatch-action-on-the-callback-of-socket-on
+                        const handlerFunc = (dispatch: any,payload:any,cb:any,getState:any) => (res:any) => {
+                            // dispatch(socketNewOrder(order));
+                            // const clientTime = new Date();
+                            // res =res.replace("REPLACEBYCLIENTTIME",clientTime.toLocaleString())
+                            const result = JSON.parse(res);
+                            // console.log(result)
+                            const {multi,response} = result;
+                            // FROM FINISH LINE
+                            let data = {};
+                            if (multi) {
+                                data = response as CallbackResponse;
+                            } else {
+                                const {output} = payload;
+                                const id = output.substr(0, output.lastIndexOf('.'));
+                                data = {[id]: (response as CallbackResponse).props};
+                            }
+
+                            const currentLayout = getState().layout;
+                            flatten(outputs).forEach((out: any) => {
+                                const propName = cleanOutputProp(out.property);
+                                const outputPath = getPath(paths, out.id);
+                                const previousValue = path(
+                                    outputPath.concat(['props', propName]),
+                                    currentLayout
+                                );
+                                const dataPath = [stringifyId(out.id), propName];
+                                const outputValue = path(dataPath, data);
+                                if (isPatch(outputValue)) {
+                                    if (previousValue === undefined) {
+                                        throw new Error('Cannot patch undefined');
+                                    }
+                                    data = assocPath(
+                                        dataPath,
+                                        handlePatch(previousValue, outputValue),
+                                        data
+                                    );
+                                }
+                            });
+
+
+
+
+                            const newCb = {
+                                ...cb,
+                                executionPromise:{data, payload}
+                            };
+                            dispatch(aggregateCallbacks([addExecutingCallbacks([newCb])]));
+                        };
+                        // console.log("EXPECTING DATA FROM EVENT NAME",`dash-update-component-response-with-jobid:${socketJobId}`)
+                        socket.on(`dash-update-component-response-with-jobid:${socketJobId}`, handlerFunc(dispatch,payload,cb,getState))
+
+                        // Layout may have changed.
+                        // const currentLayout = getState().layout;
+                        
+
+                        // return {data, payload};
+                    } catch (res: any) {
+                        // lastError = res;
+                        console.log(res)
+                    }
+                // }
+
+                // we reach here when we run out of retries.
+                // return {error: lastError, payload: null};
+            } catch (error: any) {
+                console.log(error)
+                return {error, payload: null};
+            }
+        };
+
+        // const newCb = {
+        //     ...cb,
+        //     executionPromise: __execute()
+        // };
+
+        // return newCb;
+    __execute()
+    } catch (error: any) {
+        console.log(error)
+        // return {
+        //     ...cb,
+        //     executionPromise: {error, payload: null}
+        // };
+    }
+}
 export function executeCallback(
     cb: IPrioritizedCallback,
     config: any,

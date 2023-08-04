@@ -4,7 +4,7 @@ import {
     addExecutedCallbacks,
     addWatchedCallbacks,
     aggregateCallbacks,
-    removeExecutingCallbacks,
+    // removeExecutingCallbacks,
     removeWatchedCallbacks
 } from '../actions/callbacks';
 
@@ -22,10 +22,12 @@ const observer: IStoreObserverDefinition<IStoreState> = {
             cb => cb.executionPromise instanceof Promise,
             executing
         );
+        // console.log("NEW EXECUTING CALLBACKS",executing)
+        // console.log("NEW EXECUTING CALLBACKS",skippedOrReady)
 
         dispatch(
             aggregateCallbacks([
-                executing.length ? removeExecutingCallbacks(executing) : null,
+                // executing.length ? removeExecutingCallbacks(executing) : null,
                 deferred.length ? addWatchedCallbacks(deferred) : null,
                 skippedOrReady.length
                     ? addExecutedCallbacks(

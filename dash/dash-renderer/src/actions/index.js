@@ -66,7 +66,10 @@ function triggerDefaultState(dispatch, getState) {
             })
         );
     }
-
+    console.log(graphs,paths,layout)
+    console.log(getLayoutCallbacks(graphs, paths, layout, {
+        outputsOnly: true
+    }))
     dispatch(
         addRequestedCallbacks(
             getLayoutCallbacks(graphs, paths, layout, {

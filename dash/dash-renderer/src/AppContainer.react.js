@@ -46,12 +46,13 @@ class UnconnectedAppContainer extends React.Component {
                 'Content-Type': 'application/json'
             }
         };
-
+        // console.log("Setting config",config)
         dispatch(setConfig(config));
     }
 
     render() {
         const {config} = this.props;
+        // console.log("Setting config",config)
         if (type(config) === 'Null') {
             return <div className='_dash-loading'>Loading...</div>;
         }

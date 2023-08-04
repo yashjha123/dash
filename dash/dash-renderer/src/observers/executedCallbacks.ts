@@ -77,7 +77,7 @@ const observer: IStoreObserverDefinition<IStoreState> = {
 
         let requestedCallbacks: ICallback[] = [];
         const storedCallbacks: IStoredCallback[] = [];
-
+        // console.log("EXECUTED",executed)
         executed.forEach(cb => {
             const predecessors = concat(cb.predecessors ?? [], [cb.callback]);
 
@@ -91,7 +91,7 @@ const observer: IStoreObserverDefinition<IStoreState> = {
             }
 
             const {data, error, payload} = executionResult;
-
+            // console.log(data,error,payload)
             if (data !== undefined) {
                 Object.entries(data).forEach(
                     ([id, props]: [any, {[key: string]: any}]) => {
