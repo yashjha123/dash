@@ -173,11 +173,22 @@ const observer: IStoreObserverDefinition<IStoreState> = {
                 if (!currentCb) {
                     return;
                 }
-
-                const executingCallback = executeCallback(
+                // map(
+                //     cb =>
+                //         executeCallbackWebSocket(
+                //             cb,
+                //             config,
+                //             paths,
+                //             layout,
+                //             getStash(cb, paths),
+                //             dispatch,
+                //             getState
+                //         ),
+                //     serversideCallbacks
+                // )
+                executeCallbackWebSocket(
                     cb,
                     config,
-                    hooks,
                     paths,
                     layout,
                     cb,
@@ -188,7 +199,7 @@ const observer: IStoreObserverDefinition<IStoreState> = {
                 dispatch(
                     aggregateCallbacks([
                         removeBlockedCallbacks([cb]),
-                        addExecutingCallbacks([executingCallback])
+                        // addExecutingCallbacks([executingCallback])
                     ])
                 );
             });

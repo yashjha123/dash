@@ -70,7 +70,9 @@ from ._pages import (
     _import_layouts_from_pages,
 )
 from ._jupyter import jupyter_dash, JupyterDisplayMode
-
+from flask_socketio import SocketIO, send, emit
+import json
+import eventlet
 # Add explicit mapping for map files
 mimetypes.add_type("application/json", ".map", True)
 
@@ -1175,8 +1177,10 @@ class Dash:
             **_kwargs,
         )
 
-    def dispatch(self):
-        body = flask.request.get_json()
+    def dispatch(self,body=None,count=0):
+        # print("THIS SHOULDN't be RUNning")
+        # print("Bye!!")
+        # body = flask.request.get_json()
 
         g = AttributeDict({})
 
@@ -1199,9 +1203,9 @@ class Dash:
             {"prop_id": x, "value": input_values.get(x)} for x in changed_props
         ]
 
-        response = (
-            g.dash_response  # pylint: disable=assigning-non-slot
-        ) = flask.Response(mimetype="application/json")
+        # response = (
+        #     g.dash_response  # pylint: disable=assigning-non-slot
+        # ) = flask.Response(mimetype="application/json")
 
         args = inputs_to_vals(inputs + state)
 
@@ -1254,13 +1258,23 @@ class Dash:
                 not isinstance(outputs_indices, int)
                 and outputs_indices != list(range(grouping_len(outputs_indices)))
             )
-
+            run_ntimes = 1
+            socket_spec = cb.get("socket_spec",False)
+            kwargs = {}
+            socket_ticks = None
+            if socket_spec:
+                run_ntimes = socket_spec["run_ntimes"]
+                socket_ticks = count
+                kwargs = {
+                    "socket_ticks": count
+                }
         except KeyError as missing_callback_function:
             msg = f"Callback function not found for output '{output}', perhaps you forgot to prepend the '@'?"
             raise KeyError(msg) from missing_callback_function
         ctx = copy_context()
         # noinspection PyArgumentList
-        response.set_data(
+        
+        return (
             ctx.run(
                 functools.partial(
                     func,
@@ -1269,9 +1283,9 @@ class Dash:
                     long_callback_manager=self._background_manager,
                     callback_context=g,
                 )
-            )
+            ), run_ntimes
         )
-        return response
+        # return response
 
     def _setup_server(self):
         if self._got_first_request["setup_server"]:
@@ -2031,7 +2045,34 @@ class Dash:
                 server_url=jupyter_server_url,
             )
         else:
-            self.server.run(host=host, port=port, debug=debug, **flask_run_options)
+            socketio = SocketIO(self.server, cors_allowed_origins="*")
+            def handle_update(data):
+                # print(data)
+                body =  json.loads(data['body'])
+                # IMPORTANT: this is purposefully a nested function
+                # print("Got some data",body)
+                # for x in range(100):
+                ntimes = 1
+                i = 0
+                ret, ntimes = self.dispatch(body,0)
+                    # print("Return value",ret)
+                    # print("SENDING DATA TO EVENT NAME",f'dash-update-component-response-with-jobid:{data["socketJobId"]}')
+                emit(f'dash-update-component-response-with-jobid:{data["socketJobId"]}', ret)
+                eventlet.sleep(3)
+                i+=1
+                while i < ntimes:
+                    print("HERE")
+                    ret, ntimes = self.dispatch(body,i)
+                    # print("Return value",ret)
+                    # print("SENDING DATA TO EVENT NAME",f'dash-update-component-response-with-jobid:{data["socketJobId"]}')
+                    emit(f'dash-update-component-response-with-jobid:{data["socketJobId"]}', ret)
+                    # time.sleep(1)
+                    eventlet.sleep(0.005)
+                    i+=1
+            socketio.on_event("dash-update-component",handle_update)
+            # socketio.run(self.server,host=host, port=port, debug=debug, **flask_run_options)
+            
+            # self.server.run(host=host, port=port, debug=debug, **flask_run_options)
 
     def enable_pages(self):
         if not self.use_pages:

@@ -50,7 +50,6 @@ GLOBAL_CALLBACK_LIST = []
 GLOBAL_CALLBACK_MAP = {}
 GLOBAL_INLINE_SCRIPTS = []
 
-
 # pylint: disable=too-many-locals
 def callback(
     *_args,
@@ -62,6 +61,8 @@ def callback(
     cancel=None,
     manager=None,
     cache_args_to_ignore=None,
+    websocket=False,
+    run_ntimes = 1,
     **_kwargs,
 ):
     """
@@ -175,7 +176,11 @@ def callback(
 
         if cache_args_to_ignore:
             long_spec["cache_args_to_ignore"] = cache_args_to_ignore
-
+    socket_spec = None
+    if websocket:
+        socket_spec = {
+            "run_ntimes": run_ntimes
+        }
     return register_callback(
         callback_list,
         callback_map,
@@ -183,6 +188,7 @@ def callback(
         *_args,
         **_kwargs,
         long=long_spec,
+        socket_spec = socket_spec,
         manager=manager,
     )
 
@@ -222,6 +228,7 @@ def insert_callback(
     prevent_initial_call,
     long=None,
     manager=None,
+    socket_spec = None
 ):
     if prevent_initial_call is None:
         prevent_initial_call = config_prevent_initial_callbacks
@@ -243,6 +250,7 @@ def insert_callback(
         and {
             "interval": long["interval"],
         },
+        "socket_spec":socket_spec,
     }
 
     callback_map[callback_id] = {
@@ -251,6 +259,7 @@ def insert_callback(
         "outputs_indices": outputs_indices,
         "inputs_state_indices": inputs_state_indices,
         "long": long,
+        "socket_spec":socket_spec,
         "output": output,
         "raw_inputs": inputs,
         "manager": manager,
@@ -282,6 +291,7 @@ def register_callback(  # pylint: disable=R0914
 
     long = _kwargs.get("long")
     manager = _kwargs.get("manager")
+    socket_spec = _kwargs.get("socket_spec")
 
     output_indices = make_grouping_by_index(output, list(range(grouping_len(output))))
     callback_id = insert_callback(
@@ -295,6 +305,7 @@ def register_callback(  # pylint: disable=R0914
         inputs_state_indices,
         prevent_initial_call,
         long=long,
+        socket_spec = socket_spec,
         manager=manager,
     )
 
