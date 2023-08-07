@@ -584,7 +584,7 @@ export function executeCallback(
     dispatch: any,
     getState: any
 ): IExecutingCallback {
-    const {output, inputs, state, clientside_function, long} = cb.callback;
+    const {output, inputs, state, clientside_function, long, force_no_output} = cb.callback;
     try {
         const inVals = fillVals(paths, layout, cb, inputs, 'Input', true);
 
@@ -633,6 +633,7 @@ export function executeCallback(
                     outputs: isMultiOutputProp(output) ? outputs : outputs[0],
                     inputs: inVals,
                     changedPropIds: keys(cb.changedPropIds),
+                    force_no_output:force_no_output,
                     state: cb.callback.state.length
                         ? fillVals(paths, layout, cb, state, 'State')
                         : undefined
