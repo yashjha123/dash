@@ -197,7 +197,6 @@ function validateDependencies(parsedDependencies, dispatchError) {
                     JSON.stringify(dep, null, 2)
                 ]);
             }
-            
         }
 
         const head =
@@ -242,8 +241,14 @@ function validateDependencies(parsedDependencies, dispatchError) {
         });
 
         findDuplicateOutputs(outputs, head, dispatchError, outStrs, outObjs);
-        if(!force_no_output){
-            findMismatchedWildcards(outputs, inputs, state, head, dispatchError);
+        if (!force_no_output) {
+            findMismatchedWildcards(
+                outputs,
+                inputs,
+                state,
+                head,
+                dispatchError
+            );
         }
     });
 }
@@ -610,14 +615,16 @@ export function computeGraphs(dependencies, dispatchError) {
 
     const fixIds = map(evolve({id: parseIfWildcard}));
     const parsedDependencies = map(dep => {
-        const {output,force_no_output} = dep;
+        const {output, force_no_output} = dep;
         const out = evolve({inputs: fixIds, state: fixIds}, dep);
-        if(force_no_output){
-            out.outputs = []
+        if (force_no_output) {
+            out.outputs = [];
         } else {
             out.outputs = map(
                 outi => assoc('out', true, splitIdAndProp(outi)),
-                isMultiOutputProp(output) ? parseMultipleOutputs(output) : [output]
+                isMultiOutputProp(output)
+                    ? parseMultipleOutputs(output)
+                    : [output]
             );
         }
         return out;
@@ -818,7 +825,9 @@ export function computeGraphs(dependencies, dispatchError) {
         // Also collect MATCH keys in the output (all outputs must share these)
         // and ALL keys in the first output (need not be shared but we'll use
         // the first output for calculations) for later convenience.
-        const {matchKeys} = findWildcardKeys(outputs.length?outputs[0].id:undefined);
+        const {matchKeys} = findWildcardKeys(
+            outputs.length ? outputs[0].id : undefined
+        );
         const firstSingleOutput = findIndex(o => !isMultiValued(o.id), outputs);
         const finalDependency = mergeRight(
             {matchKeys, firstSingleOutput, outputs},
@@ -1100,7 +1109,10 @@ export function addAllResolvedFromOutputs(resolve, paths, matches) {
             }
         } else {
             const cb = makeResolvedCallback(callback, resolve, '');
-            if (flatten(cb.getOutputs(paths)).length || callback.force_no_output) {
+            if (
+                flatten(cb.getOutputs(paths)).length ||
+                callback.force_no_output
+            ) {
                 matches.push(cb);
             }
         }
@@ -1165,7 +1177,13 @@ export function getWatchedKeys(id, newProps, graphs) {
  *   See getCallbackByOutput for details.
  */
 export function getUnfilteredLayoutCallbacks(graphs, paths, layoutChunk, opts) {
-    const {outputsOnly, removedArrayInputsOnly, newPaths, chunkPath, forceNoOutputCallbacks} = opts;
+    const {
+        outputsOnly,
+        removedArrayInputsOnly,
+        newPaths,
+        chunkPath,
+        forceNoOutputCallbacks
+    } = opts;
     const foundCbIds = {};
     const callbacks = [];
 
@@ -1227,19 +1245,7 @@ export function getUnfilteredLayoutCallbacks(graphs, paths, layoutChunk, opts) {
                 }
             }
         }
-        if (forceNoOutputCallbacks && inIdCallbacks){
-            const maybeAddCallback = (callback) => {callback.force_no_output?callback.addCallback(callback):null}
-            for (const property in inIdCallbacks) {
-                getCallbacksByInput(
-                    graphs,
-                    paths,
-                    id,
-                    property,
-                    INDIRECT
-                ).forEach(maybeAddCallback);
-            }
-        }
-        if ((!outputsOnly) && inIdCallbacks) {
+        if (!outputsOnly && inIdCallbacks) {
             const maybeAddCallback = removedArrayInputsOnly
                 ? addCallbackIfArray(stringifyId(id))
                 : addCallback;
