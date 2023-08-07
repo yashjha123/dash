@@ -43,6 +43,7 @@ export const crawlLayout = (
     currentPath = [],
     extraPath = undefined
 ) => {
+    // console.log(object,func,currentPath,extraPath)
     if (Array.isArray(object)) {
         // children array
         object.forEach((child, i) => {

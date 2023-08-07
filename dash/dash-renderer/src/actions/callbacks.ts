@@ -352,6 +352,7 @@ function handleServerside(
 
     const requestTime = Date.now();
     const body = JSON.stringify(payload);
+    console.log("JSON.stringify(payload)",body)
     let cacheKey: string;
     let job: string;
     let runningOff: any;
@@ -584,7 +585,8 @@ export function executeCallback(
     dispatch: any,
     getState: any
 ): IExecutingCallback {
-    const {output, inputs, state, clientside_function, long} = cb.callback;
+    console.log('cb.callback',cb.callback)
+    const {output, inputs, state, clientside_function, long, force_no_output} = cb.callback;
     try {
         const inVals = fillVals(paths, layout, cb, inputs, 'Input', true);
 
@@ -633,6 +635,7 @@ export function executeCallback(
                     outputs: isMultiOutputProp(output) ? outputs : outputs[0],
                     inputs: inVals,
                     changedPropIds: keys(cb.changedPropIds),
+                    force_no_output: force_no_output,
                     state: cb.callback.state.length
                         ? fillVals(paths, layout, cb, state, 'State')
                         : undefined
@@ -690,6 +693,7 @@ export function executeCallback(
 
                 for (let retry = 0; retry <= MAX_AUTH_RETRIES; retry++) {
                     try {
+                        console.log("new handleServerSide",payload)
                         let data = await handleServerside(
                             dispatch,
                             hooks,

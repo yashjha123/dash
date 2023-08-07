@@ -126,7 +126,15 @@ function storeEffect(props, events, setErrorLoading) {
         layout,
         layoutRequest
     } = props;
-
+    console.log("Currents state of graph",{
+        appLifecycle,
+        dependenciesRequest,
+        dispatch,
+        error,
+        graphs,
+        layout,
+        layoutRequest
+    })
     if (isEmpty(layoutRequest)) {
         dispatch(apiThunk('_dash-layout', 'GET', 'layoutRequest'));
     } else if (layoutRequest.status === STATUS.OK) {

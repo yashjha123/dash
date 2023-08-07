@@ -57,7 +57,7 @@ export function getCallbacksByInput(
         if (!callbacks) {
             return [];
         }
-
+        console.log("getCallbacksByInput",callbacks)
         callbacks.forEach(
             addAllResolvedFromOutputs(resolveDeps(), paths, matches)
         );
@@ -261,7 +261,7 @@ export const getLayoutCallbacks = (
         layout,
         options
     );
-
+    console.log("unfiltered callbacks come here",callbacks)
     /*
         Remove from the initial callbacks those that are left with only excluded inputs.
 
@@ -302,9 +302,11 @@ export const getLayoutCallbacks = (
                 flatten(map(({getOutputs}) => getOutputs(paths), excluded))
             )
         );
+        console.log(included,exclusions)
     }
 
     if (options.filterRoot) {
+        console.log("filter root option was there, hmm. other options are",options)
         let rootId = path(['props', 'id'], layout);
         if (rootId) {
             rootId = stringifyId(rootId);

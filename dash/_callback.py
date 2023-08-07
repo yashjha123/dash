@@ -24,6 +24,7 @@ from ._grouping import (
 )
 from ._utils import (
     create_callback_id,
+    create_special_id,
     stringify_id,
     to_json,
     coerce_to_list,
@@ -63,6 +64,7 @@ def callback(
     cancel=None,
     manager=None,
     cache_args_to_ignore=None,
+    force_no_output=False,
     **_kwargs,
 ):
     """
@@ -200,6 +202,7 @@ def callback(
         config_prevent_initial_callbacks,
         *_args,
         **_kwargs,
+        force_no_output=force_no_output,
         long=long_spec,
     )
 
@@ -238,6 +241,7 @@ def insert_callback(
     inputs_state_indices,
     prevent_initial_call,
     long=None,
+    no_output=False
 ):
     if prevent_initial_call is None:
         prevent_initial_call = config_prevent_initial_callbacks
@@ -247,11 +251,14 @@ def insert_callback(
     )
 
     callback_id = create_callback_id(output, inputs)
+    special_id = create_special_id(output, inputs)
     callback_spec = {
         "output": callback_id,
         "inputs": [c.to_dict() for c in inputs],
         "state": [c.to_dict() for c in state],
         "clientside_function": None,
+        "force_no_output":no_output,
+        "special_id":special_id,
         # prevent_initial_call can be a string "initial_duplicates"
         # which should not prevent the initial call.
         "prevent_initial_call": prevent_initial_call is True,
@@ -296,6 +303,7 @@ def register_callback(  # pylint: disable=R0914
         multi = True
 
     long = _kwargs.get("long")
+    no_output = _kwargs.get("force_no_output")
 
     output_indices = make_grouping_by_index(output, list(range(grouping_len(output))))
     callback_id = insert_callback(
@@ -309,6 +317,7 @@ def register_callback(  # pylint: disable=R0914
         inputs_state_indices,
         prevent_initial_call,
         long=long,
+        no_output=no_output,
     )
 
     # pylint: disable=too-many-locals
@@ -462,7 +471,11 @@ def register_callback(  # pylint: disable=R0914
                     output_value = list(output_value)
 
                 # Flatten grouping and validate grouping structure
-                flat_output_values = flatten_grouping(output_value, output)
+                print("output",output)
+                if len(output):
+                    flat_output_values = flatten_grouping(output_value, output)
+                else:
+                    flat_output_values = []
 
             _validate.validate_multi_return(
                 output_spec, flat_output_values, callback_id

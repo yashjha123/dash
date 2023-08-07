@@ -51,7 +51,7 @@ export function getCSRFHeader() {
 
 function triggerDefaultState(dispatch, getState) {
     const {graphs, paths, layout} = getState();
-
+    console.log("new triggerDefaultState")
     // overallOrder will assert circular dependencies for multi output.
     try {
         graphs.MultiGraph.overallOrder();
@@ -66,7 +66,13 @@ function triggerDefaultState(dispatch, getState) {
             })
         );
     }
-
+    console.log("addRequestedCallbacks",[graphs, paths, layout, {
+        outputsOnly: true
+    }])
+    console.log("getLayoutCallbacks",getLayoutCallbacks(graphs, paths, layout, {
+        outputsOnly: true,
+        noCallbacksOutput: true
+    }))
     dispatch(
         addRequestedCallbacks(
             getLayoutCallbacks(graphs, paths, layout, {

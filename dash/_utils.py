@@ -127,7 +127,10 @@ class AttributeDict(dict):
         if not names:
             return next(iter(self), {})
 
-
+def create_special_id(output,inputs):
+    id = ".".join(str(x) for x in inputs)
+    return id
+            
 def create_callback_id(output, inputs):
     # A single dot within a dict id key or value is OK
     # but in case of multiple dots together escape each dot
@@ -147,6 +150,9 @@ def create_callback_id(output, inputs):
         return _id
 
     if isinstance(output, (list, tuple)):
+        # if len(output) == 0:
+        #     # TODO: replace with function name?
+        #     return "..."
         return ".." + "...".join(_concat(x) for x in output) + ".."
 
     return _concat(output)

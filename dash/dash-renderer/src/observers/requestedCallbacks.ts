@@ -371,7 +371,8 @@ const observer: IStoreObserverDefinition<IStoreState> = {
 
             return res;
         }, readyCallbacks);
-
+        // console.trace()
+        console.log("these callbacks got dropped",dropped)
         /*
             TODO?
             Clean up the `requested` list - during the dispatch phase,
@@ -385,7 +386,33 @@ const observer: IStoreObserverDefinition<IStoreState> = {
 
         const added = difference(requested, initialRequested);
         const removed = difference(initialRequested, requested);
-
+        console.log("Aggregate",[
+            // Clean up requested callbacks
+            added.length ? addRequestedCallbacks(added) : null,
+            removed.length ? removeRequestedCallbacks(removed) : null,
+            // Clean up duplicated callbacks
+            pDuplicates.length
+                ? removePrioritizedCallbacks(pDuplicates)
+                : null,
+            bDuplicates.length ? removeBlockedCallbacks(bDuplicates) : null,
+            eDuplicates.length
+                ? removeExecutingCallbacks(eDuplicates)
+                : null,
+            wDuplicates.length ? removeWatchedCallbacks(wDuplicates) : null,
+            // Prune callbacks
+            pRemoved.length ? removePrioritizedCallbacks(pRemoved) : null,
+            pAdded.length ? addPrioritizedCallbacks(pAdded) : null,
+            bRemoved.length ? removeBlockedCallbacks(bRemoved) : null,
+            bAdded.length ? addBlockedCallbacks(bAdded) : null,
+            eRemoved.length ? removeExecutingCallbacks(eRemoved) : null,
+            eAdded.length ? addExecutingCallbacks(eAdded) : null,
+            wRemoved.length ? removeWatchedCallbacks(wRemoved) : null,
+            wAdded.length ? addWatchedCallbacks(wAdded) : null,
+            // Promote callbacks
+            readyCallbacks.length
+                ? addPrioritizedCallbacks(readyCallbacks)
+                : null
+        ])
         dispatch(
             aggregateCallbacks([
                 // Clean up requested callbacks

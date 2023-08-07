@@ -1176,6 +1176,7 @@ class Dash:
         )
 
     def dispatch(self):
+        # print(self.callback_map)
         body = flask.request.get_json()
 
         g = AttributeDict({})
@@ -1186,9 +1187,15 @@ class Dash:
         g.states_list = state = body.get(  # pylint: disable=assigning-non-slot
             "state", []
         )
+        print(body)
         output = body["output"]
-        outputs_list = body.get("outputs") or split_callback_id(output)
-        g.outputs_list = outputs_list  # pylint: disable=assigning-non-slot
+        
+        if body["force_no_output"]:
+            outputs_list = []
+            g.outputs_list = outputs_list
+        else:
+            outputs_list = body.get("outputs") or split_callback_id(output)
+            g.outputs_list = outputs_list  # pylint: disable=assigning-non-slot
 
         g.input_values = (  # pylint: disable=assigning-non-slot
             input_values
@@ -1246,15 +1253,19 @@ class Dash:
                 flat_outputs = [outputs_list]
             else:
                 flat_outputs = outputs_list
-
-            outputs_grouping = map_grouping(
-                lambda ind: flat_outputs[ind], outputs_indices
-            )
-            g.outputs_grouping = outputs_grouping  # pylint: disable=assigning-non-slot
-            g.using_outputs_grouping = (  # pylint: disable=assigning-non-slot
-                not isinstance(outputs_indices, int)
-                and outputs_indices != list(range(grouping_len(outputs_indices)))
-            )
+            print(flat_outputs)
+            if len(flat_outputs):
+                outputs_grouping = map_grouping(
+                    lambda ind: flat_outputs[ind], outputs_indices
+                )
+                g.outputs_grouping = outputs_grouping  # pylint: disable=assigning-non-slot
+                g.using_outputs_grouping = (  # pylint: disable=assigning-non-slot
+                    not isinstance(outputs_indices, int)
+                    and outputs_indices != list(range(grouping_len(outputs_indices)))
+                )
+            else:
+                g.outputs_grouping = []
+                g.using_outputs_grouping = []
 
         except KeyError as missing_callback_function:
             msg = f"Callback function not found for output '{output}', perhaps you forgot to prepend the '@'?"

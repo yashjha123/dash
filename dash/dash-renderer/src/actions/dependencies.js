@@ -191,10 +191,12 @@ function validateDependencies(parsedDependencies, dispatchError) {
         let hasOutputs = true;
         if (outputs.length === 1 && !outputs[0].id && !outputs[0].property) {
             hasOutputs = false;
-            dispatchError('A callback is missing Outputs', [
-                'Please provide an output for this callback:',
-                JSON.stringify(dep, null, 2)
-            ]);
+            console.warn('A callback is missing Outputs',"We hope you know what you are doing")
+            console.log("outputs looks like",outputs)
+            // dispatchError('A callback is missing Outputs', [
+            //     'Please provide an output for this callback:',
+            //     JSON.stringify(dep, null, 2)
+            // ]);
         }
 
         const head =
@@ -382,7 +384,11 @@ function checkInOutOverlap(out, inputs) {
 }
 
 function findMismatchedWildcards(outputs, inputs, state, head, dispatchError) {
-    const {matchKeys: out0MatchKeys} = findWildcardKeys(outputs[0].id);
+    console.log("output inside findMismatchedWildcards looks like", outputs)
+    if(outputs.length==0){
+        return;
+    }
+    const {matchKeys: out0MatchKeys} = findWildcardKeys(outputs.length?outputs[0].id:undefined);
     outputs.forEach((out, i) => {
         if (i && !equals(findWildcardKeys(out.id).matchKeys, out0MatchKeys)) {
             dispatchError('Mismatched `MATCH` wildcards across `Output`s', [
@@ -605,12 +611,22 @@ export function computeGraphs(dependencies, dispatchError) {
 
     const fixIds = map(evolve({id: parseIfWildcard}));
     const parsedDependencies = map(dep => {
+        console.log("inside parsedDependencies",dep)
         const {output} = dep;
         const out = evolve({inputs: fixIds, state: fixIds}, dep);
-        out.outputs = map(
-            outi => assoc('out', true, splitIdAndProp(outi)),
-            isMultiOutputProp(output) ? parseMultipleOutputs(output) : [output]
-        );
+        // callback has no output
+        if(output=="...."){
+            console.log("output is ....")
+            out.outputs = []
+        } else {
+            console.log("output is ", output)
+            out.outputs = map(
+                outi => assoc('out', true, splitIdAndProp(outi)),
+                isMultiOutputProp(output) ? parseMultipleOutputs(output) : [output]
+            );
+        }
+        console.log("return of parsedDependencies",out)
+
         return out;
     }, dependencies);
 
@@ -809,7 +825,7 @@ export function computeGraphs(dependencies, dispatchError) {
         // Also collect MATCH keys in the output (all outputs must share these)
         // and ALL keys in the first output (need not be shared but we'll use
         // the first output for calculations) for later convenience.
-        const {matchKeys} = findWildcardKeys(outputs[0].id);
+        const {matchKeys} = findWildcardKeys(outputs.length?outputs[0].id:undefined);
         const firstSingleOutput = findIndex(o => !isMultiValued(o.id), outputs);
         const finalDependency = mergeRight(
             {matchKeys, firstSingleOutput, outputs},
@@ -846,6 +862,7 @@ export function computeGraphs(dependencies, dispatchError) {
         });
 
         inputs.forEach(inputObject => {
+            console.log("inputs.forEach",inputObject);
             const {id: inId, property: inProp} = inputObject;
             if (typeof inId === 'object') {
                 addPattern(inputPatterns, inId, inProp, finalDependency);
@@ -1091,9 +1108,12 @@ export function addAllResolvedFromOutputs(resolve, paths, matches) {
             }
         } else {
             const cb = makeResolvedCallback(callback, resolve, '');
-            if (flatten(cb.getOutputs(paths)).length) {
+            console.log("makeResolvedCallback",cb)
+            // if (flatten(cb.getOutputs(paths)).length) {
+                console.log("pushed",cb)
+
                 matches.push(cb);
-            }
+            // }
         }
     };
 }
@@ -1156,11 +1176,13 @@ export function getWatchedKeys(id, newProps, graphs) {
  *   See getCallbackByOutput for details.
  */
 export function getUnfilteredLayoutCallbacks(graphs, paths, layoutChunk, opts) {
-    const {outputsOnly, removedArrayInputsOnly, newPaths, chunkPath} = opts;
+    const {outputsOnly, noCallbacksOutput, removedArrayInputsOnly, newPaths, chunkPath} = opts;
+    console.log("opts inside getUnfilteredLayoutCallbacks",opts)
     const foundCbIds = {};
     const callbacks = [];
 
     function addCallback(callback) {
+        console.log("add",callback,"was here")
         if (callback) {
             const foundIndex = foundCbIds[callback.resolvedId];
             if (foundIndex !== undefined) {
@@ -1180,6 +1202,8 @@ export function getUnfilteredLayoutCallbacks(graphs, paths, layoutChunk, opts) {
     }
 
     function addCallbackIfArray(idStr) {
+        console.log("add",idStr,"was here")
+
         return cb =>
             cb.getInputs(paths).some(ini => {
                 if (
@@ -1204,6 +1228,8 @@ export function getUnfilteredLayoutCallbacks(graphs, paths, layoutChunk, opts) {
 
     function handleOneId(id, outIdCallbacks, inIdCallbacks) {
         if (outIdCallbacks) {
+            console.log("first if condition")
+
             for (const property in outIdCallbacks) {
                 const cb = getCallbackByOutput(graphs, paths, id, property);
                 if (cb) {
@@ -1218,7 +1244,8 @@ export function getUnfilteredLayoutCallbacks(graphs, paths, layoutChunk, opts) {
                 }
             }
         }
-        if (!outputsOnly && inIdCallbacks) {
+        if (((!outputsOnly)||true) && inIdCallbacks) {
+            console.log("second if condition")
             const maybeAddCallback = removedArrayInputsOnly
                 ? addCallbackIfArray(stringifyId(id))
                 : addCallback;
@@ -1236,6 +1263,13 @@ export function getUnfilteredLayoutCallbacks(graphs, paths, layoutChunk, opts) {
                 };
             }
             for (const property in inIdCallbacks) {
+                console.log(getCallbacksByInput(
+                    graphs,
+                    paths,
+                    id,
+                    property,
+                    INDIRECT
+                ))
                 getCallbacksByInput(
                     graphs,
                     paths,
@@ -1249,8 +1283,12 @@ export function getUnfilteredLayoutCallbacks(graphs, paths, layoutChunk, opts) {
 
     crawlLayout(layoutChunk, child => {
         const id = path(['props', 'id'], child);
+        console.log("crawl layout",id,"?")
+        console.log("crawl layout",child,"?")
         if (id) {
             if (typeof id === 'string' && !removedArrayInputsOnly) {
+                console.log("graphs.outputMap[id]",graphs.outputMap[id])
+                console.log("graphs.inputMap[id]",graphs.inputMap[id])
                 handleOneId(id, graphs.outputMap[id], graphs.inputMap[id]);
             } else {
                 const keyStr = Object.keys(id).sort().join(',');

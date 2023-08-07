@@ -13,6 +13,7 @@ export default function error(state = initialError, action) {
             // log errors to the console for stack tracing and so they're
             // available even with debugging off
             /* eslint-disable-next-line no-console */
+            console.trace(action.payload.error);
             console.error(action.payload.error);
 
             if (action.payload.type === 'frontEnd') {
