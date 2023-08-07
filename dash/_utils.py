@@ -127,9 +127,13 @@ class AttributeDict(dict):
         if not names:
             return next(iter(self), {})
 
-def create_special_id(output,inputs):
-    id = ".".join(str(x) for x in inputs)
-    return id
+# def create_special_id(output,inputs):
+#     _id = x.component_id_str().replace(".", "\\.") + "." + x.component_property
+#     hashed_inputs = hashlib.md5(
+#             ".".join(str(x) for x in inputs).encode("utf-8")
+#         ).hexdigest()
+#     id = ".".join(str(x) for x in inputs)
+#     return id
             
 def create_callback_id(output, inputs):
     # A single dot within a dict id key or value is OK
@@ -150,9 +154,13 @@ def create_callback_id(output, inputs):
         return _id
 
     if isinstance(output, (list, tuple)):
-        # if len(output) == 0:
+        if len(output) == 0:
         #     # TODO: replace with function name?
-        #     return "..."
+            if not hashed_inputs:
+                hashed_inputs = hashlib.md5(
+                    ".".join(str(x) for x in inputs).encode("utf-8")
+                ).hexdigest()
+            return ".."+hashed_inputs+".."
         return ".." + "...".join(_concat(x) for x in output) + ".."
 
     return _concat(output)

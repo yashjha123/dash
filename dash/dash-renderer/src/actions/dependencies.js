@@ -612,11 +612,10 @@ export function computeGraphs(dependencies, dispatchError) {
     const fixIds = map(evolve({id: parseIfWildcard}));
     const parsedDependencies = map(dep => {
         console.log("inside parsedDependencies",dep)
-        const {output} = dep;
+        const {output,force_no_output} = dep;
         const out = evolve({inputs: fixIds, state: fixIds}, dep);
         // callback has no output
-        if(output=="...."){
-            console.log("output is ....")
+        if(force_no_output){
             out.outputs = []
         } else {
             console.log("output is ", output)

@@ -24,7 +24,6 @@ from ._grouping import (
 )
 from ._utils import (
     create_callback_id,
-    create_special_id,
     stringify_id,
     to_json,
     coerce_to_list,
@@ -251,14 +250,13 @@ def insert_callback(
     )
 
     callback_id = create_callback_id(output, inputs)
-    special_id = create_special_id(output, inputs)
+    # special_id = create_special_id(output, inputs)
     callback_spec = {
         "output": callback_id,
         "inputs": [c.to_dict() for c in inputs],
         "state": [c.to_dict() for c in state],
         "clientside_function": None,
         "force_no_output":no_output,
-        "special_id":special_id,
         # prevent_initial_call can be a string "initial_duplicates"
         # which should not prevent the initial call.
         "prevent_initial_call": prevent_initial_call is True,
@@ -471,7 +469,6 @@ def register_callback(  # pylint: disable=R0914
                     output_value = list(output_value)
 
                 # Flatten grouping and validate grouping structure
-                print("output",output)
                 if len(output):
                     flat_output_values = flatten_grouping(output_value, output)
                 else:
