@@ -152,7 +152,7 @@ def create_callback_id(output, inputs):
                 hashed_inputs = hashlib.md5(
                     ".".join(str(x) for x in inputs).encode("utf-8")
                 ).hexdigest()
-            return ".."+hashed_inputs+".."
+            return ".." + hashed_inputs + ".."
         return ".." + "...".join(_concat(x) for x in output) + ".."
 
     return _concat(output)

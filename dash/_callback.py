@@ -224,7 +224,7 @@ def insert_callback(
     prevent_initial_call,
     long=None,
     manager=None,
-    force_no_output=False
+    force_no_output=False,
 ):
     if prevent_initial_call is None:
         prevent_initial_call = config_prevent_initial_callbacks
@@ -239,7 +239,7 @@ def insert_callback(
         "inputs": [c.to_dict() for c in inputs],
         "state": [c.to_dict() for c in state],
         "clientside_function": None,
-        "force_no_output":force_no_output,
+        "force_no_output": force_no_output,
         # prevent_initial_call can be a string "initial_duplicates"
         # which should not prevent the initial call.
         "prevent_initial_call": prevent_initial_call is True,
@@ -300,7 +300,7 @@ def register_callback(  # pylint: disable=R0914
         prevent_initial_call,
         long=long,
         manager=manager,
-        force_no_output=force_no_output
+        force_no_output=force_no_output,
     )
 
     # pylint: disable=too-many-locals
@@ -459,7 +459,6 @@ def register_callback(  # pylint: disable=R0914
                 else:
                     # for no output callback
                     flat_output_values = []
-
 
             _validate.validate_multi_return(
                 output_spec, flat_output_values, callback_id

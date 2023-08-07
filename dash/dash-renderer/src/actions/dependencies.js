@@ -1181,8 +1181,7 @@ export function getUnfilteredLayoutCallbacks(graphs, paths, layoutChunk, opts) {
         outputsOnly,
         removedArrayInputsOnly,
         newPaths,
-        chunkPath,
-        forceNoOutputCallbacks
+        chunkPath
     } = opts;
     const foundCbIds = {};
     const callbacks = [];

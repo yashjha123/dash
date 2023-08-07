@@ -1253,7 +1253,9 @@ class Dash:
                 outputs_grouping = map_grouping(
                     lambda ind: flat_outputs[ind], outputs_indices
                 )
-                g.outputs_grouping = outputs_grouping  # pylint: disable=assigning-non-slot
+                g.outputs_grouping = (
+                    outputs_grouping  # pylint: disable=assigning-non-slot
+                )
                 g.using_outputs_grouping = (  # pylint: disable=assigning-non-slot
                     not isinstance(outputs_indices, int)
                     and outputs_indices != list(range(grouping_len(outputs_indices)))
