@@ -234,7 +234,7 @@ function validateDependencies(parsedDependencies, dispatchError) {
                 ]);
             }
             args.forEach((idProp, i) => {
-                validateArg(idProp, head, cls, i, dispatchError);
+                validateArg(idProp, head, cls, i, dispatchError, outputs);
             });
         });
 
@@ -243,7 +243,7 @@ function validateDependencies(parsedDependencies, dispatchError) {
     });
 }
 
-function validateArg({id, property}, head, cls, i, dispatchError) {
+function validateArg({id, property}, head, cls, i, dispatchError, outputs) {
     if (typeof property !== 'string' || !property) {
         dispatchError('Callback property error', [
             head,
@@ -251,15 +251,17 @@ function validateArg({id, property}, head, cls, i, dispatchError) {
             'but we expected `property` to be a non-empty string.'
         ]);
     }
-
     if (typeof id === 'object') {
-        if (isEmpty(id)) {
-            dispatchError('Callback item missing ID', [
-                head,
-                `${cls}[${i}].id = {}`,
-                'Every item linked to a callback needs an ID'
-            ]);
-        }
+        // if (isEmpty(id)) {
+        //     console.log(outputs)
+        //     if(outputs.length!=0){
+        //         dispatchError('Callback item missing ID', [
+        //             head,
+        //             `${cls}[${i}].id = {}`,
+        //             'Every item linked to a callback needs an ID'
+        //         ]);
+        //     }
+        // }
 
         forEachObjIndexed((v, k) => {
             if (!k) {
@@ -290,13 +292,15 @@ function validateArg({id, property}, head, cls, i, dispatchError) {
             }
         }, id);
     } else if (typeof id === 'string') {
-        if (!id) {
-            dispatchError('Callback item missing ID', [
-                head,
-                `${cls}[${i}].id = "${id}"`,
-                'Every item linked to a callback needs an ID'
-            ]);
-        }
+        // if (!id) {
+        //     if(outputs.length!=0){
+        //         dispatchError('Callback item missing ID', [
+        //             head,
+        //             `${cls}[${i}].id = "${id}"`,
+        //             'Every item linked to a callback needs an ID'
+        //         ]);
+        //     }
+        // }
         const invalidChars = idInvalidChars.filter(c => includes(c, id));
         if (invalidChars.length) {
             dispatchError('Callback invalid ID string', [
